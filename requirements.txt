@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+python-dotenv
+pillow
+python-jose
+passlib[bcrypt]
+sqlalchemy
+pytest
+pandas
+openpyxl
+pytesseract
+python-multipart
+aiofiles

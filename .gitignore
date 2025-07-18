@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.xlsx
+*.jpg
+*.zip
+node_modules/
+.idea/
+.DS_Store
+*.log
