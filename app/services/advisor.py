@@ -18,16 +18,35 @@ HEADERS = {
 
 def analyze_table_with_mistral(data: dict) -> str:
     try:
+        from app.utils.history import load_history
         lignes = data.get("preview", [])
         tableau_resume = "\n".join([
             f"{l['Date']} | {l['Libellé']} | -{l['Débit (€)'] or 0}€ / +{l['Crédit (€)'] or 0}€"
             for l in lignes if "Date" in l
         ])
 
+        # Charger l'historique et extraire quelques analyses pertinentes (hors erreurs)
+        historique = load_history()
+        exemples = []
+        for entry in reversed(historique):
+            if "gpt_analysis" in entry and not ("error" in entry["gpt_analysis"].lower() or "erreur" in entry["gpt_analysis"].lower()):
+                exemples.append(f"Fichier: {entry['filename']}\nAnalyse IA: {entry['gpt_analysis']}")
+            if len(exemples) >= 2:
+                break
+        exemples_str = "\n---\n".join(exemples) if exemples else "Aucune analyse historique exploitable."
+
         prompt = (
-            "Tu es un expert-comptable. Voici des lignes d’un relevé bancaire :\n"
+            "Tu es un expert-comptable. Voici des lignes d’un relevé bancaire à analyser :\n"
             f"{tableau_resume}\n"
-            "➡️ Donne des conseils pour optimiser les dépenses et améliorer le rendement."
+            "\nVoici des exemples d'analyses précédentes pour t'inspirer :\n"
+            f"{exemples_str}\n"
+            "\nConsignes :\n"
+            "- Fais une analyse détaillée et structurée du relevé.\n"
+            "- Commence par une synthèse générale.\n"
+            "- Identifie les points forts et les faiblesses de la gestion financière.\n"
+            "- Propose des recommandations concrètes pour optimiser les dépenses et améliorer le rendement.\n"
+            "- Si possible, mets en perspective avec les tendances observées dans l'historique.\n"
+            "- Présente la réponse sous forme de rapport professionnel clair et concis."
         )
 
         response = httpx.post(

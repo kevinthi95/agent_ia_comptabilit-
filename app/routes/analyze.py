@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union, cast
 
 from app.services.extractor import read_document
 from app.services.advisor import analyze_table_with_mistral, analyze_text_with_mistral
-from app.utils.history import add_to_history
+from app.utils.history import load_history, add_to_history
 
 UPLOAD_DIR = Path("data/uploads")
 
@@ -43,8 +43,7 @@ async def analyze_existing_file(filename: str):
             "message": f"Error while reading '{filename}'.",
             "error": raw_data["error"] if isinstance(raw_data, dict) and "error" in raw_data else "Invalid file format."
         }
-
-    # ✅ cast typé pour éviter l’erreur Pyright
+        
     preview_data: Dict[str, Any] = cast(Dict[str, Any], raw_data)
     preview_rows: List[Dict[str, Any]] = preview_data.get("preview", [])
 
@@ -79,20 +78,16 @@ async def analyze_existing_file(filename: str):
     except Exception as e:
         print("History saving failed:", e)
 
+    # ✅ Nouvelle partie : chargement de l’historique complet
     try:
-        json.dumps({
-            "message": f"File '{filename}' analyzed successfully.",
-            "excel_preview": preview_data,
-            "analysis": gpt_analysis_sanitized
-        })
+        past_analyses = load_history()
     except Exception as e:
-        return {
-            "message": "⚠️ Internal error: JSON serialization failed.",
-            "error": str(e)
-        }
+        past_analyses = []
+        print("Failed to load history:", e)
 
     return {
         "message": f"File '{filename}' analyzed successfully.",
         "excel_preview": preview_data,
-        "analysis": gpt_analysis_sanitized
+        "analysis": gpt_analysis_sanitized,
+        "history": past_analyses  # ✅ Ajout de l'historique complet ici
     }

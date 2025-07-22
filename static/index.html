@@ -82,8 +82,7 @@
 <body>
 
   <h1>Agent IA - Analyse Comptable</h1>
-
-  <!-- Upload d'un fichier -->
+  
   <section>
     <h2>1. Uploader un fichier comptable</h2>
     <form id="upload-form">
@@ -92,8 +91,6 @@
     </form>
     <div id="upload-status"></div>
   </section>
-
-  <!-- Fichier existant -->
   <section>
     <h2>2. Choisir un fichier existant à analyser</h2>
     <select id="file-select">
@@ -101,11 +98,13 @@
     </select>
     <button onclick="analyzeFile()">Analyser</button>
   </section>
-
-  <!-- Résultat -->
   <section>
     <h2>3. Résultat de l’analyse</h2>
     <pre id="result">Aucun résultat pour le moment.</pre>
+  </section>
+  <section>
+    <h2>4. Historique des analyses</h2>
+    <div id="history">Chargement...</div>
   </section>
 
   <script>
@@ -114,7 +113,7 @@
         const response = await fetch('/upload/files');
         const data = await response.json();
         const select = document.getElementById('file-select');
-        select.length = 1; // reset options
+        select.length = 1;
         data.files.forEach(file => {
           const option = document.createElement('option');
           option.value = file;
@@ -132,9 +131,36 @@
       try {
         const response = await fetch(`/analyze/${filename}`);
         const data = await response.json();
-        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('result').textContent = data.analysis;
+        loadHistory(); // recharge l'historique après analyse
       } catch (error) {
         document.getElementById('result').textContent = "Erreur lors de l'analyse.";
+        console.error(error);
+      }
+    }
+
+    async function loadHistory() {
+      const historyDiv = document.getElementById("history");
+      historyDiv.innerHTML = "";
+      try {
+        const response = await fetch("/history");
+        const history = await response.json();
+
+        if (Array.isArray(history) && history.length > 0) {
+          // Afficher uniquement la dernière analyse
+          const entry = history[history.length - 1];
+          const el = document.createElement("div");
+          el.innerHTML = `
+            <hr>
+            <strong>📁 ${entry.filename}</strong><br>
+            ⏱️ ${new Date(entry.upload_time).toLocaleString()}<br>
+            🧠 <pre>${entry.gpt_analysis}</pre>`;
+          historyDiv.appendChild(el);
+        } else {
+          historyDiv.innerHTML = "<em>Aucune analyse précédente.</em>";
+        }
+      } catch (error) {
+        historyDiv.innerHTML = "Erreur lors du chargement de l'historique.";
         console.error(error);
       }
     }
@@ -157,8 +183,10 @@
       }
     });
 
-    window.onload = loadFiles;
+    window.onload = () => {
+      loadFiles();
+      loadHistory();
+    };
   </script>
-
 </body>
 </html>
